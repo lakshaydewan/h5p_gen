@@ -3,7 +3,6 @@ import path from 'path';
 import archiver from 'archiver';
 import { UTApi } from 'uploadthing/server';
 import { promisify } from 'util';
-import { NextRequest } from 'next/server';
 
 const utapi = new UTApi({
   token: process.env.UPLOADTHING_TOKEN!,
@@ -12,7 +11,7 @@ const utapi = new UTApi({
 const renameAsync = promisify(fs.rename);
 const unlinkAsync = promisify(fs.unlink);
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const wordsPath = path.join(process.cwd(), 'content', 'words'); // Your words folder
     const tempDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(process.cwd(), 'temp');
