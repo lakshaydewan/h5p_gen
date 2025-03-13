@@ -13,11 +13,11 @@ const renameAsync = promisify(fs.rename);
 const unlinkAsync = promisify(fs.unlink);
 
 interface Word {
-    fixWord: false
-    orientation: "across" | "down"
-    clue: string
-    answer: string
-  }
+  fixWord: false;
+  orientation: 'across' | 'down';
+  clue: string;
+  answer: string;
+}
 
 async function modifyAndZipContent(title: string, description: string, wordsData: Word[]) {
   const contentPath = path.join(process.cwd(), 'content', 'words');
@@ -29,7 +29,7 @@ async function modifyAndZipContent(title: string, description: string, wordsData
 
   const zipPath = path.join(tempDir, 'modified-content.zip');
   const h5pPath = path.join(tempDir, 'modified-content.h5p');
-  const contentJsonPath = path.join(contentPath, 'content' , 'content.json');
+  const contentJsonPath = path.join(contentPath, 'content', 'content.json');
   const h5pJsonPath = path.join(contentPath, 'h5p.json');
 
   if (!fs.existsSync(contentJsonPath)) {
@@ -38,11 +38,11 @@ async function modifyAndZipContent(title: string, description: string, wordsData
 
   const contentData = JSON.parse(fs.readFileSync(contentJsonPath, 'utf-8'));
   const h5pJsonData = JSON.parse(fs.readFileSync(h5pJsonPath, 'utf-8'));
+
   h5pJsonData.title = title;
-  contentData.taskDescription = `<p>${description}<\/p>`;
+  contentData.taskDescription = `<p>${description}</p>`;
   contentData.words = wordsData;
 
-  fs.writeFileSync(contentJsonPath, JSON.stringify(contentData, null, 2));
   fs.writeFileSync(contentJsonPath, JSON.stringify(contentData, null, 2));
 
   await new Promise((resolve, reject) => {
@@ -81,8 +81,8 @@ async function modifyAndZipContent(title: string, description: string, wordsData
 export async function POST(req: NextRequest) {
   const { title, description, wordsData } = await req.json();
 
-  if (!title || !description || wordsData.length === 0) {
-    return new Response(JSON.stringify({ error: 'Missing title or description' }), { status: 400 });
+  if (!title || !description || !Array.isArray(wordsData) || wordsData.length === 0) {
+    return new Response(JSON.stringify({ error: 'Missing title, description, or words data' }), { status: 400 });
   }
 
   try {

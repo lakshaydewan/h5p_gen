@@ -4,6 +4,7 @@ import archiver from 'archiver';
 import { UTApi } from 'uploadthing/server';
 import { promisify } from 'util';
 import { NextRequest } from 'next/server';
+import os from 'os';
 
 const utapi = new UTApi({
   token: process.env.UPLOADTHING_TOKEN!,
@@ -14,15 +15,11 @@ const unlinkAsync = promisify(fs.unlink);
 
 async function modifyAndZipContent(title: string, description: string, wordsData: string) {
   const contentPath = path.join(process.cwd(), 'content', 'drag-the-words');
-  const tempDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(process.cwd(), 'temp');
-
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'h5p-'));
 
   const zipPath = path.join(tempDir, 'modified-content.zip');
   const h5pPath = path.join(tempDir, 'modified-content.h5p');
-  const contentJsonPath = path.join(contentPath, 'content' , 'content.json');
+  const contentJsonPath = path.join(contentPath, 'content', 'content.json');
   const h5pJsonPath = path.join(contentPath, 'h5p.json');
 
   if (!fs.existsSync(contentJsonPath)) {
@@ -31,13 +28,17 @@ async function modifyAndZipContent(title: string, description: string, wordsData
 
   const contentData = JSON.parse(fs.readFileSync(contentJsonPath, 'utf-8'));
   const h5pJsonData = JSON.parse(fs.readFileSync(h5pJsonPath, 'utf-8'));
+
+  // Modify content
   h5pJsonData.title = title;
-  contentData.taskDescription = `<p>${description}<\/p>\n`;
+  contentData.taskDescription = `<p>${description}</p>\n`;
   contentData.textField = wordsData;
 
+  // Write modified content.json and h5p.json
   fs.writeFileSync(contentJsonPath, JSON.stringify(contentData, null, 2));
-  fs.writeFileSync(contentJsonPath, JSON.stringify(contentData, null, 2));
+  fs.writeFileSync(h5pJsonPath, JSON.stringify(h5pJsonData, null, 2));
 
+  // Create ZIP file
   await new Promise((resolve, reject) => {
     const output = fs.createWriteStream(zipPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
@@ -58,14 +59,18 @@ async function modifyAndZipContent(title: string, description: string, wordsData
     archive.finalize();
   });
 
+  // Rename to .h5p
   await renameAsync(zipPath, h5pPath);
 
+  // Read the H5P file
   const fileBuffer = await fs.promises.readFile(h5pPath);
   const blob = new Blob([fileBuffer], { type: 'application/h5p' });
   const file = new File([blob], 'modified-content.h5p', { type: 'application/h5p' });
 
+  // Upload to UploadThing
   const response = await utapi.uploadFiles([file]);
 
+  // Cleanup
   await unlinkAsync(h5pPath);
 
   return response;
