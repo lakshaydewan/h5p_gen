@@ -4,7 +4,6 @@ import archiver from 'archiver';
 import { UTApi } from 'uploadthing/server';
 import { promisify } from 'util';
 import { NextRequest } from 'next/server';
-import os from 'os';
 
 const utapi = new UTApi({
   token: process.env.UPLOADTHING_TOKEN!,
@@ -15,7 +14,11 @@ const unlinkAsync = promisify(fs.unlink);
 
 async function modifyAndZipContent(title: string, description: string, wordsData: string) {
   const contentPath = path.join(process.cwd(), 'content', 'drag-the-words');
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'h5p-'));
+  const tempDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(process.cwd(), 'temp');
+
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
 
   const zipPath = path.join(tempDir, 'modified-content.zip');
   const h5pPath = path.join(tempDir, 'modified-content.h5p');
@@ -31,7 +34,7 @@ async function modifyAndZipContent(title: string, description: string, wordsData
 
   // Modify content
   h5pJsonData.title = title;
-  contentData.taskDescription = `<p>${description}</p>\n`;
+  contentData.taskDescription = `<p>${description}</p>`;
   contentData.textField = wordsData;
 
   // Write modified content.json and h5p.json

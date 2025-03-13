@@ -1,5 +1,5 @@
 {
-  "taskDescription": "<p>JUST TESTING</p>\n",
+  "taskDescription": "<p>TEST_DESC</p>\n",
   "checkAnswer": "Check",
   "tryAgain": "Retry",
   "showSolution": "Show Solution",
@@ -9,7 +9,7 @@
     "instantFeedback": false,
     "enableCheckButton": true
   },
-  "textField": "Bluberries are *blue*.\nCranBerries are *red*.",
+  "textField": "Bjkdalsdnalsd",
   "overallFeedback": [
     {
       "from": 0,
