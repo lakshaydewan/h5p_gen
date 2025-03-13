@@ -29,7 +29,6 @@ export default function H5PGenerator() {
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [questions, setQuestions] = useState("")
 
   const [wordsData, setWordsData] = useState<Word[]>([])
   const [textField, setTextField] = useState("")
@@ -49,7 +48,6 @@ export default function H5PGenerator() {
             customData: {
               title,
               description,
-              questions: questions.split("\n").filter((q) => q.trim() !== ""),
             },
           }
 
@@ -322,19 +320,6 @@ Strawberries are *red*.
 Cloudberries are *orange*.`}
                 value={textField}
                 onChange={(e) => setTextField(e.target.value)}
-                rows={5}
-              />
-            </div>
-          )}
-
-          {contentType !== "CrossWords" && contentType !== "DragTheWords" && (
-            <div>
-              <Label htmlFor="questions">Questions/Content (one per line)</Label>
-              <Textarea
-                id="questions"
-                placeholder="Enter your questions or content items, one per line"
-                value={questions}
-                onChange={(e) => setQuestions(e.target.value)}
                 rows={5}
               />
             </div>
