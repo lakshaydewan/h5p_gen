@@ -4,6 +4,8 @@ import archiver from 'archiver';
 import { UTApi } from 'uploadthing/server';
 import { promisify } from 'util';
 import { NextRequest } from 'next/server';
+import os from 'os';
+import mime from 'mime-types';
 
 const utapi = new UTApi({
   token: process.env.UPLOADTHING_TOKEN!,
@@ -21,11 +23,7 @@ interface Word {
 
 async function modifyAndZipContent(title: string, description: string, wordsData: Word[]) {
   const contentPath = path.join(process.cwd(), 'content', 'words');
-  const tempDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(process.cwd(), 'temp');
-
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'h5p-'));
 
   const zipPath = path.join(tempDir, 'modified-content.zip');
   const h5pPath = path.join(tempDir, 'modified-content.h5p');
@@ -39,17 +37,21 @@ async function modifyAndZipContent(title: string, description: string, wordsData
   const contentData = JSON.parse(fs.readFileSync(contentJsonPath, 'utf-8'));
   const h5pJsonData = JSON.parse(fs.readFileSync(h5pJsonPath, 'utf-8'));
 
+  // Modify content
   h5pJsonData.title = title;
   contentData.taskDescription = `<p>${description}</p>`;
   contentData.words = wordsData;
 
+  // Write the modified JSON back
   fs.writeFileSync(contentJsonPath, JSON.stringify(contentData, null, 2));
+  fs.writeFileSync(h5pJsonPath, JSON.stringify(h5pJsonData, null, 2));
 
-  await new Promise((resolve, reject) => {
+  // Create ZIP archive
+  await new Promise<void>((resolve, reject) => {
     const output = fs.createWriteStream(zipPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
-    output.on('close', () => resolve(undefined));
+    output.on('close', resolve);
     archive.on('error', reject);
     archive.pipe(output);
 
@@ -65,14 +67,22 @@ async function modifyAndZipContent(title: string, description: string, wordsData
     archive.finalize();
   });
 
+  // Rename .zip to .h5p
   await renameAsync(zipPath, h5pPath);
 
+  // Read the file buffer
   const fileBuffer = await fs.promises.readFile(h5pPath);
-  const blob = new Blob([fileBuffer], { type: 'application/h5p' });
+
+  // Create a Blob from the buffer
+  const blob = new Blob([fileBuffer], { type: mime.lookup('.h5p') || 'application/h5p' });
+
+  // Create a File object
   const file = new File([blob], 'modified-content.h5p', { type: 'application/h5p' });
 
+  // Upload to UploadThing
   const response = await utapi.uploadFiles([file]);
 
+  // Cleanup
   await unlinkAsync(h5pPath);
 
   return response;
