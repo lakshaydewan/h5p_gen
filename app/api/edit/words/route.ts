@@ -73,8 +73,11 @@ async function modifyAndZipContent(title: string, description: string, wordsData
   // Read the file buffer
   const fileBuffer = await fs.promises.readFile(h5pPath);
 
-  // Create a Blob from the buffer
-  const blob = new Blob([fileBuffer], { type: mime.lookup('.h5p') || 'application/h5p' });
+  // Convert Buffer to Uint8Array for Blob compatibility
+  const uint8Array = new Uint8Array(fileBuffer);
+
+  // Create a Blob from Uint8Array
+  const blob = new Blob([uint8Array], { type: mime.lookup('.h5p') || 'application/h5p' });
 
   // Create a File object
   const file = new File([blob], 'modified-content.h5p', { type: 'application/h5p' });
