@@ -1,29 +1,25 @@
-import fs from 'fs';
+import fs from 'fs-extra';
 import path from 'path';
 import archiver from 'archiver';
 import { UTApi } from 'uploadthing/server';
-import { promisify } from 'util';
+import os from 'os';
+import mime from 'mime-types';
 import { NextRequest } from 'next/server';
 
 const utapi = new UTApi({
   token: process.env.UPLOADTHING_TOKEN!,
 });
 
-const renameAsync = promisify(fs.rename);
-const unlinkAsync = promisify(fs.unlink);
-
 async function modifyAndZipContent(title: string, description: string, wordsData: string) {
   const contentPath = path.join(process.cwd(), 'content', 'drag-the-words');
-  const tempDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(process.cwd(), 'temp');
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'h5p-'));
 
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
+  // Copy content to temporary directory
+  const tempContentPath = path.join(tempDir, 'drag-the-words');
+  fs.copySync(contentPath, tempContentPath);
 
-  const zipPath = path.join(tempDir, 'modified-content.zip');
-  const h5pPath = path.join(tempDir, 'modified-content.h5p');
-  const contentJsonPath = path.join(contentPath, 'content', 'content.json');
-  const h5pJsonPath = path.join(contentPath, 'h5p.json');
+  const contentJsonPath = path.join(tempContentPath, 'content', 'content.json');
+  const h5pJsonPath = path.join(tempContentPath, 'h5p.json');
 
   if (!fs.existsSync(contentJsonPath)) {
     throw new Error('content.json not found');
@@ -37,44 +33,39 @@ async function modifyAndZipContent(title: string, description: string, wordsData
   contentData.taskDescription = `<p>${description}</p>`;
   contentData.textField = wordsData;
 
-  // Write modified content.json and h5p.json
+  // Write the modified JSON back
   fs.writeFileSync(contentJsonPath, JSON.stringify(contentData, null, 2));
   fs.writeFileSync(h5pJsonPath, JSON.stringify(h5pJsonData, null, 2));
 
-  // Create ZIP file
-  await new Promise((resolve, reject) => {
-    const output = fs.createWriteStream(zipPath);
+  const h5pPath = path.join(tempDir, 'modified-content.h5p');
+
+  // Create ZIP archive
+  await new Promise<void>((resolve, reject) => {
+    const output = fs.createWriteStream(h5pPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
-    output.on('close', () => resolve(undefined));
+    output.on('close', resolve);
     archive.on('error', reject);
     archive.pipe(output);
 
-    fs.readdirSync(contentPath).forEach((file) => {
-      const filePath = path.join(contentPath, file);
-      if (fs.lstatSync(filePath).isDirectory()) {
-        archive.directory(filePath, file);
-      } else {
-        archive.file(filePath, { name: file });
-      }
-    });
-
+    archive.directory(tempContentPath, false);
     archive.finalize();
   });
 
-  // Rename to .h5p
-  await renameAsync(zipPath, h5pPath);
-
-  // Read the H5P file
+  // Read the file buffer
   const fileBuffer = await fs.promises.readFile(h5pPath);
-  const blob = new Blob([fileBuffer], { type: 'application/h5p' });
+
+  // Create a Blob from the buffer
+  const blob = new Blob([fileBuffer], { type: mime.lookup('.h5p') || 'application/h5p' });
+
+  // Create a File object
   const file = new File([blob], 'modified-content.h5p', { type: 'application/h5p' });
 
   // Upload to UploadThing
   const response = await utapi.uploadFiles([file]);
 
   // Cleanup
-  await unlinkAsync(h5pPath);
+  fs.removeSync(tempDir);
 
   return response;
 }
