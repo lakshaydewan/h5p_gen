@@ -2,8 +2,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import archiver from 'archiver';
 import { UTApi } from 'uploadthing/server';
-import os from 'os';
 import { NextRequest } from 'next/server';
+import os from 'os';
 
 const utapi = new UTApi({
   token: process.env.UPLOADTHING_TOKEN || '',
