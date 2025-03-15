@@ -19,6 +19,7 @@ interface Word {
 
 async function modifyAndZipContent(title: string, description: string, wordsData: Word[]) {
   const contentPath = path.join(process.cwd(), 'content', 'words', 'content');
+  const h5pPathOriginal = path.join(process.cwd(), 'content', 'words', 'h5p.json');
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'h5p-'));
 
   // Copy the content to a temporary directory
@@ -26,12 +27,14 @@ async function modifyAndZipContent(title: string, description: string, wordsData
   fs.copySync(contentPath, tempContentPath);
 
   const contentJsonPath = path.join(tempContentPath, 'content.json');
-  const h5pJsonPath = path.join(process.cwd(), 'content', 'words', 'h5p.json');
-
+  const h5pJsonPath = path.join(tempDir, 'h5p.json');
 
   if (!fs.existsSync(contentJsonPath)) {
     throw new Error('content.json not found');
   }
+
+  // Copy h5p.json to temporary directory
+  fs.copySync(h5pPathOriginal, h5pJsonPath);
 
   const contentData = JSON.parse(fs.readFileSync(contentJsonPath, 'utf-8'));
   const h5pJsonData = JSON.parse(fs.readFileSync(h5pJsonPath, 'utf-8'));
