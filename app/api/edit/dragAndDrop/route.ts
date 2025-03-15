@@ -11,15 +11,15 @@ const utapi = new UTApi({
 });
 
 async function modifyAndZipContent(title: string, description: string, wordsData: string) {
-  const contentPath = path.join(process.cwd(), 'content', 'drag-the-words');
+  const contentPath = path.join(process.cwd(), 'content', 'drag-the-words', 'content');
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'h5p-'));
 
   // Copy content to temporary directory
-  const tempContentPath = path.join(tempDir, 'drag-the-words');
+  const tempContentPath = path.join(tempDir, 'content');
   fs.copySync(contentPath, tempContentPath);
 
-  const contentJsonPath = path.join(tempContentPath, 'content', 'content.json');
-  const h5pJsonPath = path.join(tempContentPath, 'h5p.json');
+  const contentJsonPath = path.join(tempContentPath, 'content.json');
+  const h5pJsonPath = path.join(process.cwd(), 'content', 'drag-the-words', 'h5p.json');
 
   if (!fs.existsSync(contentJsonPath)) {
     throw new Error('content.json not found');
@@ -48,7 +48,9 @@ async function modifyAndZipContent(title: string, description: string, wordsData
     archive.on('error', reject);
     archive.pipe(output);
 
-    archive.directory(tempContentPath, false);
+    archive.directory(tempContentPath, 'content');
+    archive.file(h5pJsonPath, { name: 'h5p.json' });
+
     archive.finalize();
   });
 
