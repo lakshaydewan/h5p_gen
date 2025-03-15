@@ -18,15 +18,16 @@ interface Word {
 }
 
 async function modifyAndZipContent(title: string, description: string, wordsData: Word[]) {
-  const contentPath = path.join(process.cwd(), 'content', 'words');
+  const contentPath = path.join(process.cwd(), 'content', 'words', 'content');
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'h5p-'));
 
   // Copy the content to a temporary directory
-  const tempContentPath = path.join(tempDir, 'words');
+  const tempContentPath = path.join(tempDir, 'content');
   fs.copySync(contentPath, tempContentPath);
 
-  const contentJsonPath = path.join(tempContentPath, 'content', 'content.json');
-  const h5pJsonPath = path.join(tempContentPath, 'h5p.json');
+  const contentJsonPath = path.join(tempContentPath, 'content.json');
+  const h5pJsonPath = path.join(process.cwd(), 'content', 'words', 'h5p.json');
+
 
   if (!fs.existsSync(contentJsonPath)) {
     throw new Error('content.json not found');
@@ -55,7 +56,10 @@ async function modifyAndZipContent(title: string, description: string, wordsData
     archive.on('error', reject);
     archive.pipe(output);
 
-    archive.directory(tempContentPath, false);
+    // Add the content folder and h5p.json to the root of the ZIP
+    archive.directory(tempContentPath, 'content');
+    archive.file(h5pJsonPath, { name: 'h5p.json' });
+
     archive.finalize();
   });
 
