@@ -10,13 +10,6 @@ const utapi = new UTApi({
   token: process.env.UPLOADTHING_TOKEN!,
 });
 
-interface Word {
-  fixWord: false;
-  orientation: 'across' | 'down';
-  clue: string;
-  answer: string;
-}
-
 async function modifyAndZipContent(title: string, description: string, textFieldsData: string) {
   const contentPath = path.join(process.cwd(), 'content', 'drag-the-words', 'content');
   const h5pPathOriginal = path.join(process.cwd(), 'content', 'drag-the-words', 'h5p.json');
