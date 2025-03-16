@@ -364,7 +364,7 @@ Cloudberries are *orange*.`}
                 body: JSON.stringify({
                   title,
                   description,
-                  textField,
+                  textFieldsData: textField,
                 }),
               })
               const data = await res.json()
